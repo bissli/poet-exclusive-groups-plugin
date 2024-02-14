@@ -9,7 +9,7 @@ packages = [{include = "poet_plugin"}]
 
 [tool.poetry.dependencies]
 python = "^3.7"
-poetry = "^1.2.0"
+poetry = "*"
 
 [tool.poetry.plugins."poetry.application.plugin"]
 poet_plugin = "poet_plugin.plugin:PEGPlugin"
