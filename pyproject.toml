@@ -1,19 +1,25 @@
-[tool.poetry]
+[project]
 name = "poet-plugin"
-version = "0.1.0"
+version = "0.1.2"
 description = "A Poetry plugin to enable exclusivity between groups"
-authors = ["Idan Tene <idan.tene@gmail.com>"]
+authors = [{ name = "Idan Tene", email = "idan.tene@gmail.com" }]
 license = "MIT"
 readme = "README.md"
+requires-python = ">=3.10,<4.0"
+dynamic = ["dependencies"]
+
+[project.entry-points."poetry.application.plugin"]
+poet_plugin = "poet_plugin.plugin:PEGPlugin"
+
+[tool.poetry]
 packages = [{include = "poet_plugin"}]
 
 [tool.poetry.dependencies]
-python = "^3.7"
 poetry = "*"
 
-[tool.poetry.plugins."poetry.application.plugin"]
-poet_plugin = "poet_plugin.plugin:PEGPlugin"
+[tool.poetry.group.dev.dependencies]
+pytest = "*"
 
 [build-system]
-requires = ["poetry-core"]
+requires = ["poetry-core>=2.0"]
 build-backend = "poetry.core.masonry.api"

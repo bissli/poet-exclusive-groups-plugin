@@ -4,40 +4,60 @@ Poet stands for **Po**etry **E**xclusivity **T**oggle (or some other excuse, I d
 `poet` seemed short and sweet since this plugin changes the internal poetry package during runtime).
 
 ## Installation
-### In a clean project
-When starting with a clean `pyproject.toml`, before any such cross-group non-exclusive dependencies are defined,
-simply install with `poetry add poet-plugin` or `poetry self add poet-plugin`.
-
-### In a cross-dependency project
-In cases where the `pyproject.toml` already has a complicated structure that would cause the poetry CLI to fail,
-such as CICD pipelines, install via `pip` first:
-```shell
-poetry shell
-pip install poet-plugin
+### Per project
+Poetry 2 installs the plugins a project declares:
+```toml
+[tool.poetry.requires-plugins]
+poet-plugin = "*"
 ```
+The first `poetry install` after the declaration fetches the plugin into `.poetry/plugins` but resolves without it, so in a
+project whose groups conflict that run fails. Every later command loads the plugin.
+
+### For every project
+```shell
+poetry self add poet-plugin
+```
+This installs into Poetry's own environment, so a project's conflicting groups never block it.
 
 ## Usage
-When running `poetry install`, the various options (`--only`, `--without`) are parsed to ensure the dependency resolver 
-only considers what needs to be considered.  
-This allows a non-mutually exclusive group definition, so that e.g. the `dev` group can refer to
-some local path, whereas a `prod` group refers to git URI.  
+`poetry update` reads `--only` and `--without` and drops the excluded groups before Poetry resolves the project. Two
+groups can then define one package from different sources, such as a local path in `dev` and a git URL in `prod`. A
+comma-separated value names several groups, as in Poetry itself: `--only prod,tools`.
 
-### Examples
-Considering the following `pyproject.toml`, depicting a mono-repository:
-```
-[tool.poetry.dependencies]
-python = ">=3.8,<3.12"
-poetry = "^1.2.0"
+The lock holds only the groups the last resolve kept. `poetry install` filters the same way when no lock exists, but
+with a lock present it installs from the lock and never resolves, so a switch from `prod` to `dev` takes
+`poetry update`. A bare `poetry update` sees both definitions of the package and fails. `poetry lock`, `poetry add`
+and `poetry remove` take no group options, so they fail in such a project.
+
+### Example
+A mono-repository `pyproject.toml`:
+```toml
+[project]
+name = "app"
+version = "0.1.0"
+requires-python = ">=3.10"
+
+[tool.poetry]
+package-mode = false
+
+[tool.poetry.requires-plugins]
+poet-plugin = "*"
 
 [tool.poetry.group.prod.dependencies]
-foo = {git = "https://github.com/bar/foo", subdirectory = "src/libs/foo"}
+foo = { git = "https://github.com/bar/foo", subdirectory = "src/libs/foo" }
 
 [tool.poetry.group.dev.dependencies]
-foo = {path = "../../libs/foo", develop = true}
+foo = { path = "../../libs/foo", develop = true }
 ```
-- Install the prod version:
-  - `poetry install --without dev`, OR
-  - `poetry install --only prod`
-- Install the dev version:
-  - `poetry install --without prod`, OR
-  - `poetry install --only dev`
+
+| Source of `foo` | Command                                                      |
+| --------------- | ------------------------------------------------------------ |
+| prod (git)      | `poetry update --only prod` or `poetry update --without dev` |
+| dev (path)      | `poetry update --only dev` or `poetry update --without prod` |
+
+## Tests
+The tests run Poetry with the plugin against a toy project in a temporary directory:
+```shell
+poetry install
+poetry run pytest
+```
